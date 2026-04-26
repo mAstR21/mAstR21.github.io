@@ -665,25 +665,30 @@ function sessionVolume(sets) {
   return sets.reduce((sum, s) => sum + (s.w ?? 0) * s.r, 0);
 }
 
-const PC_WEIGHT = '#4ade80'; // grün  — Gewicht erhöht
-const PC_REPS   = '#60a5fa'; // blau  — mehr Wdh
-const PC_BOTH   = '#ffd60a'; // gelb  — beides
-const PC_NONE   = '#555';    // grau  — kein Fortschritt
-const PC_DOWN   = '#f87171'; // rot   — Gewicht reduziert
+const PC_WEIGHT   = '#4ade80'; // grün        — Gewicht erhöht
+const PC_REPS     = '#60a5fa'; // blau        — mehr Wdh
+const PC_BOTH     = '#ffd60a'; // gelb        — beides
+const PC_NONE     = '#555';    // dunkelgrau  — gleichgeblieben
+const PC_REPS_DN  = '#fb923c'; // blasses Rot — weniger Wdh
+const PC_DOWN     = '#f87171'; // rot         — Gewicht reduziert
 
 function pointColor(curr, prev, bodyweight = false) {
   if (!prev) return PC_NONE;
   if (bodyweight) {
-    return totalReps(curr) > totalReps(prev) ? PC_REPS : PC_NONE;
+    const rUp = totalReps(curr) > totalReps(prev);
+    const rDn = totalReps(curr) < totalReps(prev);
+    return rUp ? PC_REPS : rDn ? PC_REPS_DN : PC_NONE;
   }
   const wCurr = maxWeight(curr), wPrev = maxWeight(prev);
   const wUp   = wCurr > wPrev;
   const wDown = wCurr < wPrev;
   const rUp   = avgReps(curr) > avgReps(prev);
-  if (wDown)      return PC_DOWN;
-  if (wUp && rUp) return PC_BOTH;
-  if (wUp)        return PC_WEIGHT;
-  if (rUp)        return PC_REPS;
+  const rDown = avgReps(curr) < avgReps(prev);
+  if (wDown)        return PC_DOWN;
+  if (wUp && rUp)   return PC_BOTH;
+  if (wUp)          return PC_WEIGHT;
+  if (rUp)          return PC_REPS;
+  if (rDown)        return PC_REPS_DN;
   return PC_NONE;
 }
 
@@ -908,8 +913,9 @@ function renderPanel(split, containerId) {
       <div class="chart-legend">
         <span class="cl-item"><span class="cl-dot" style="background:#4ade80"></span>Gewicht erhöht</span>
         <span class="cl-item"><span class="cl-dot" style="background:#60a5fa"></span>Mehr Wdh</span>
-        <span class="cl-item"><span class="cl-dot" style="background:#ffd60a"></span>Beides</span>
-        <span class="cl-item"><span class="cl-dot" style="background:#555"></span>Kein Fortschritt</span>
+        <span class="cl-item"><span class="cl-dot" style="background:#ffd60a"></span>Beides erhöht</span>
+        <span class="cl-item"><span class="cl-dot" style="background:#fb923c"></span>Weniger Wdh</span>
+        <span class="cl-item"><span class="cl-dot" style="background:#555"></span>Gleichgeblieben</span>
         <span class="cl-item"><span class="cl-dot" style="background:#f87171"></span>Gewicht reduziert</span>
       </div>
       <div class="charts-grid">${chartCards}</div>
@@ -973,10 +979,11 @@ function renderPanel(split, containerId) {
                 const col = ctx.dataset.pointBackgroundColor?.[ctx.dataIndex];
                 if (!e) return `${ctx.parsed.y} kg·Wdh`;
                 const driver =
-                  col === PC_BOTH   ? '↑ Gewicht + Wdh'    :
-                  col === PC_WEIGHT ? '↑ Mehr Gewicht'      :
-                  col === PC_REPS   ? '↑ Mehr Wdh'          :
-                  col === PC_DOWN   ? '↓ Gewicht reduziert' : '→ Kein Fortschritt';
+                  col === PC_BOTH    ? '↑ Gewicht + Wdh'    :
+                  col === PC_WEIGHT  ? '↑ Mehr Gewicht'      :
+                  col === PC_REPS    ? '↑ Mehr Wdh'          :
+                  col === PC_DOWN    ? '↓ Gewicht reduziert' :
+                  col === PC_REPS_DN ? '↓ Weniger Wdh'       : '→ Gleichgeblieben';
                 const lines = [`Volumen: ${e.vol} kg·Wdh`, driver];
                 if (e.avgW !== null) lines.push(`Ø Gewicht: ${e.avgW} kg`);
                 lines.push(`Ø Wdh: ${e.avgR}`);
